@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AROMAKER – Sistema de Incidencias</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ═══════════════════════════════════════════
+   WINDOWS 95 — Variables
+═══════════════════════════════════════════ */
+:root {
+  --w95-bg:        #008080;   /* teal escritorio */
+  --w95-face:      #c0c0c0;   /* gris superficie */
+  --w95-light:     #ffffff;   /* borde claro (arriba/izq) */
+  --w95-lighter:   #dfdfdf;   /* sombra interior clara */
+  --w95-dark:      #808080;   /* borde oscuro interior */
+  --w95-darker:    #000000;   /* borde negro exterior */
+  --w95-title:     #000080;   /* azul titlebar */
+  --w95-title-txt: #ffffff;
+  --w95-txt:       #000000;
+  --w95-input-bg:  #ffffff;
+  --w95-disabled:  #808080;
+  --w95-blue:      #000080;
+  --w95-red:       #800000;
+  --w95-green:     #008000;
+  --font: 'MS Sans Serif', 'Tahoma', sans-serif;
+  --font-mono: 'Courier New', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--w95-bg);
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--w95-txt);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   UTILIDADES DE BORDE WIN95
+   raised = saliente, sunken = hundido
+═══════════════════════════════════════════ */
+.raised {
+  border-top:    2px solid var(--w95-light);
+  border-left:   2px solid var(--w95-light);
+  border-right:  2px solid var(--w95-darker);
+  border-bottom: 2px solid var(--w95-darker);
+}
+.raised-inner {
+  border-top:    1px solid var(--w95-lighter);
+  border-left:   1px solid var(--w95-lighter);
+  border-right:  1px solid var(--w95-dark);
+  border-bottom: 1px solid var(--w95-dark);
+}
+.sunken {
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+}
+.sunken-inner {
+  border-top:    1px solid var(--w95-dark);
+  border-left:   1px solid var(--w95-dark);
+  border-right:  1px solid var(--w95-lighter);
+  border-bottom: 1px solid var(--w95-lighter);
+}
+
+/* ═══════════════════════════════════════════
+   VENTANA PRINCIPAL
+═══════════════════════════════════════════ */
+.window {
+  position: fixed;
+  inset: 4px;
+  background: var(--w95-face);
+  display: flex;
+  flex-direction: column;
+  border-top:    2px solid var(--w95-light);
+  border-left:   2px solid var(--w95-light);
+  border-right:  2px solid var(--w95-darker);
+  border-bottom: 2px solid var(--w95-darker);
+}
+
+/* TITLEBAR */
+.titlebar {
+  background: linear-gradient(to right, var(--w95-blue), #1084d0);
+  padding: 3px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.titlebar-icon {
+  width: 16px; height: 16px;
+  background: #c0c0c0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.titlebar-text {
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.titlebar-clock {
+  color: white;
+  font-size: 10px;
+  margin-right: 6px;
+  font-family: var(--font-mono);
+}
+.titlebar-btn {
+  width: 16px; height: 14px;
+  background: var(--w95-face);
+  border-top:    1px solid var(--w95-light);
+  border-left:   1px solid var(--w95-light);
+  border-right:  1px solid var(--w95-darker);
+  border-bottom: 1px solid var(--w95-darker);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: bold;
+  color: black;
+}
+.titlebar-btn:active {
+  border-top:    1px solid var(--w95-darker);
+  border-left:   1px solid var(--w95-darker);
+  border-right:  1px solid var(--w95-light);
+  border-bottom: 1px solid var(--w95-light);
+}
+
+/* MENUBAR */
+.menubar {
+  background: var(--w95-face);
+  padding: 2px 4px;
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--w95-dark);
+}
+.menubar span {
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.menubar span:hover {
+  background: var(--w95-blue);
+  color: white;
+}
+.menu-sep {
+  flex: 1;
+}
+.menu-link {
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--w95-blue);
+  text-decoration: underline;
+}
+.menu-link:hover { background: var(--w95-blue); color: white; }
+
+/* TOOLBAR */
+.toolbar {
+  background: var(--w95-face);
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--w95-dark);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  border-left: 1px solid var(--w95-dark);
+  border-right: 1px solid var(--w95-light);
+  margin: 0 2px;
+}
+
+/* BOTÓN WIN95 */
+.btn95 {
+  background: var(--w95-face);
+  border-top:    2px solid var(--w95-light);
+  border-left:   2px solid var(--w95-light);
+  border-right:  2px solid var(--w95-darker);
+  border-bottom: 2px solid var(--w95-darker);
+  padding: 3px 12px;
+  font-family: var(--font);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 80px;
+  color: var(--w95-txt);
+  outline: none;
+}
+.btn95:active, .btn95.pressed {
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+  padding: 4px 11px 2px 13px;
+}
+.btn95:disabled {
+  color: var(--w95-dark);
+  cursor: default;
+}
+.btn95.primary {
+  font-weight: bold;
+  outline: 1px dotted black;
+  outline-offset: -4px;
+}
+
+/* ÁREA DE CONTENIDO */
+.content-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* PANEL / GROUPBOX */
+.groupbox {
+  margin: 6px 8px;
+  border: 1px solid var(--w95-dark);
+  border-top: 1px solid var(--w95-dark);
+  position: relative;
+  padding: 10px 8px 8px;
+}
+.groupbox-label {
+  position: absolute;
+  top: -7px; left: 8px;
+  background: var(--w95-face);
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+.gb-full {
+  grid-column: 1 / -1;
+}
+
+/* SCROLL PANEL */
+.scroll-panel {
+  overflow-y: auto;
+  padding: 0;
+}
+.scroll-panel::-webkit-scrollbar { width: 16px; }
+.scroll-panel::-webkit-scrollbar-track {
+  background: var(--w95-face);
+  border-left: 1px solid var(--w95-dark);
+}
+.scroll-panel::-webkit-scrollbar-thumb {
+  background: var(--w95-face);
+  border-top:    1px solid var(--w95-light);
+  border-left:   1px solid var(--w95-light);
+  border-right:  1px solid var(--w95-darker);
+  border-bottom: 1px solid var(--w95-darker);
+}
+.scroll-panel::-webkit-scrollbar-button {
+  background: var(--w95-face);
+  border-top:    1px solid var(--w95-light);
+  border-left:   1px solid var(--w95-light);
+  border-right:  1px solid var(--w95-darker);
+  border-bottom: 1px solid var(--w95-darker);
+  height: 16px;
+}
+
+/* GRID INTERNA */
+.fg { display: grid; gap: 6px; }
+.fg2 { grid-template-columns: 1fr 1fr; }
+.fg3 { grid-template-columns: 1fr 1fr 1fr; }
+.frow { display: flex; flex-direction: column; gap: 2px; }
+
+/* LABEL */
+label {
+  font-size: 11px;
+  display: block;
+  margin-bottom: 1px;
+}
+
+/* INPUTS */
+input[type=text],
+input[type=date],
+input[type=time],
+input[type=number],
+textarea,
+select {
+  background: var(--w95-input-bg);
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 4px;
+  width: 100%;
+  outline: none;
+  color: black;
+  resize: vertical;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 1px dotted black;
+  outline-offset: -3px;
+}
+select { cursor: pointer; }
+select option { background: white; }
+
+/* FOLIO BOX */
+.folio-box {
+  background: var(--w95-input-bg);
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: bold;
+  padding: 4px 6px;
+  color: var(--w95-blue);
+  letter-spacing: .02em;
+  margin-bottom: 8px;
+}
+
+/* RADIO BUTTONS WIN95 */
+.radio-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.radio-opt {
+  display: flex; align-items: center; gap: 4px;
+  cursor: pointer; font-size: 11px;
+  user-select: none;
+}
+.radio-circle {
+  width: 13px; height: 13px;
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+  border-radius: 50%;
+  background: white;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.radio-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: black;
+  display: none;
+}
+.radio-opt.selected .radio-dot { display: block; }
+
+/* PREVIEW BOX */
+.preview-inner {
+  background: white;
+  border-top:    2px solid var(--w95-darker);
+  border-left:   2px solid var(--w95-darker);
+  border-right:  2px solid var(--w95-light);
+  border-bottom: 2px solid var(--w95-light);
+  height: calc(100% - 20px);
+  overflow: auto;
+  padding: 6px;
+}
+.preview-inner pre {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  line-height: 1.5;
+  color: #000;
+  white-space: pre;
+}
+
+/* STATUSBAR */
+.statusbar {
+  background: var(--w95-face);
+  border-top: 1px solid var(--w95-dark);
+  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.status-pane {
+  border-top:    1px solid var(--w95-dark);
+  border-left:   1px solid var(--w95-dark);
+  border-right:  1px solid var(--w95-light);
+  border-bottom: 1px solid var(--w95-light);
+  padding: 1px 6px;
+  min-width: 120px;
+}
+.status-pane.flex1 { flex: 1; }
+.status-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #00aa00; margin-right: 4px;
+}
+
+/* TOAST WIN95 — ventanita de mensaje */
+.toast95 {
+  position: fixed;
+  bottom: 28px; right: 20px;
+  background: var(--w95-face);
+  border-top:    2px solid var(--w95-light);
+  border-left:   2px solid var(--w95-light);
+  border-right:  2px solid var(--w95-darker);
+  border-bottom: 2px solid var(--w95-darker);
+  padding: 0;
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+  z-index: 9999;
+  min-width: 240px;
+  font-size: 11px;
+}
+.toast95.show { opacity: 1; }
+.toast95-title {
+  background: var(--w95-blue);
+  color: white;
+  font-weight: bold;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+.toast95.err .toast95-title { background: var(--w95-red); }
+.toast95-body { padding: 8px 12px; }
+
+/* SPINNER */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: spin .6s linear infinite; }
+
+/* RESPONSIVE */
+@media (max-width: 800px) {
+  .content-area { grid-template-columns: 1fr; }
+  .gb-full { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ VENTANA PRINCIPAL ══════════════════ -->
+<div class="window">
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="titlebar-icon">📋</div>
+    <div class="titlebar-text">AROMAKER – Sistema de Incidencias v1.0</div>
+    <div class="titlebar-clock" id="clock">--:--:--</div>
+    <div class="titlebar-btn">_</div>
+    <div class="titlebar-btn">□</div>
+    <div class="titlebar-btn">✕</div>
+  </div>
+
+  <!-- MENUBAR -->
+  <div class="menubar">
+    <span>Archivo</span>
+    <span>Editar</span>
+    <span>Ver</span>
+    <span>Herramientas</span>
+    <span>Ayuda</span>
+    <div class="menu-sep"></div>
+    <span class="menu-link" onclick="window.open('https://docs.google.com/spreadsheets/d/1MrrW9zh40eaTjCuRDN_Fxl3bDN35xJgSDOmdjkdYuJc/edit','_blank')">📊 Abrir Google Sheet</span>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button class="btn95 primary" onclick="accion('pdf')">🖨 Generar PDF</button>
+    <button class="btn95" id="btn-sheet" onclick="accion('sheet')">💾 Guardar en Sheet</button>
+    <button class="btn95" id="btn-both"  onclick="accion('ambos')">⚡ PDF + Sheet</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn95" onclick="limpiar()">🗑 Limpiar</button>
+    <div class="toolbar-sep"></div>
+    <span style="font-size:11px;color:#444;">Folio: </span>
+    <span id="folio-display" style="font-family:var(--font-mono);font-size:11px;font-weight:bold;color:var(--w95-blue);">INC-...</span>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area">
+
+    <!-- PANEL 1: Datos Generales -->
+    <div class="scroll-panel">
+      <div class="groupbox">
+        <span class="groupbox-label">Datos Generales</span>
+        <div class="fg fg2" style="margin-bottom:8px">
+          <div class="frow">
+            <label>Fecha:</label>
+            <input type="date" id="fecha">
+          </div>
+          <div class="frow">
+            <label>Hora:</label>
+            <input type="time" id="hora" step="1">
+          </div>
+          <div class="frow">
+            <label>Emitido por:</label>
+            <select id="emisor">
+              <option>Leonardo Castro</option>
+              <option>Andrea Fuentes</option>
+              <option>Yeimy Realpe</option>
+              <option>Joselyn Gómez</option>
+              <option>Leslie Rios</option>
+            </select>
+          </div>
+          <div class="frow">
+            <label>Responsable:</label>
+            <input type="text" id="responsable" placeholder="nombre / área...">
+          </div>
+        </div>
+      </div>
+
+      <div class="groupbox">
+        <span class="groupbox-label">Asunto / Clasificación</span>
+        <div class="fg" style="margin-bottom:8px">
+          <div class="fg fg2">
+            <div class="frow">
+              <label>SKU / Código:</label>
+              <input type="text" id="asunto" placeholder="A8995, FC-1234...">
+            </div>
+            <div class="frow">
+              <label>Monto ($):</label>
+              <input type="number" id="monto" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="frow">
+            <label>Categoría:</label>
+            <select id="categoria">
+              <option value="">— Seleccionar —</option>
+              <option>Despacho incorrecto</option>
+              <option>Producto dañado</option>
+              <option>Error de precio</option>
+              <option>Faltante</option>
+              <option>Devolución</option>
+              <option>Reclamo cliente</option>
+              <option>Error bodega</option>
+              <option>Otro</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="groupbox">
+        <span class="groupbox-label">Estado</span>
+        <div class="radio-row" id="pg-estado">
+          <div class="radio-opt selected" onclick="setPill('estado','Abierto',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>Abierto
+          </div>
+          <div class="radio-opt" onclick="setPill('estado','En proceso',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>En proceso
+          </div>
+          <div class="radio-opt" onclick="setPill('estado','Cerrado',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>Cerrado
+          </div>
+        </div>
+        <input type="hidden" id="estado" value="Abierto">
+      </div>
+
+      <div class="groupbox">
+        <span class="groupbox-label">Prioridad</span>
+        <div class="radio-row" id="pg-prioridad">
+          <div class="radio-opt" onclick="setPill('prioridad','Alta',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>Alta
+          </div>
+          <div class="radio-opt selected" onclick="setPill('prioridad','Media',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>Media
+          </div>
+          <div class="radio-opt" onclick="setPill('prioridad','Baja',this)">
+            <div class="radio-circle"><div class="radio-dot"></div></div>Baja
+          </div>
+        </div>
+        <input type="hidden" id="prioridad" value="Media">
+      </div>
+    </div>
+
+    <!-- PANEL 2: Descripción + Resolución + Preview -->
+    <div class="scroll-panel">
+      <div class="groupbox">
+        <span class="groupbox-label">Descripción del Incidente</span>
+        <div class="frow">
+          <textarea id="descripcion" rows="5" placeholder="Describe el incidente con detalle..."></textarea>
+        </div>
+      </div>
+
+      <div class="groupbox">
+        <span class="groupbox-label">Resolución / Acciones Tomadas</span>
+        <div class="frow">
+          <textarea id="resolucion" rows="4" placeholder="Acciones tomadas o pendientes..."></textarea>
+        </div>
+      </div>
+
+      <div class="groupbox" style="flex:1">
+        <span class="groupbox-label">Vista Previa del Documento</span>
+        <div class="preview-inner">
+          <pre id="preview-pre">[ Complete el formulario para previsualizar ]</pre>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+  <!-- STATUSBAR -->
+  <div class="statusbar">
+    <div class="status-pane flex1" id="status-line">
+      <span class="status-dot"></span>Listo
+    </div>
+    <div class="status-pane">AROMAKER SPA © 2026</div>
+    <div class="status-pane" id="status-clock2">--:--:--</div>
+  </div>
+
+</div><!-- /window -->
+
+<!-- TOAST WIN95 -->
+<div class="toast95" id="toast">
+  <div class="toast95-title" id="toast-title">Sistema</div>
+  <div class="toast95-body" id="toast-body"></div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWO1_9WpnHBQOE56vvhG8bILpApf7QIAxr-8beKzpcSY9IV2CMWM8LARbK1zqOz9WMJg/exec";
+
+function tickClock() {
+  const d = new Date();
+  const t = [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  const cl = document.getElementById('clock');
+  const cl2 = document.getElementById('status-clock2');
+  if(cl) cl.textContent = t;
+  if(cl2) cl2.textContent = t;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+const pad = n => String(n).padStart(2,'0');
+function nowP() {
+  const d = new Date();
+  return { Y:d.getFullYear(), M:pad(d.getMonth()+1), D:pad(d.getDate()),
+           h:pad(d.getHours()), m:pad(d.getMinutes()), s:pad(d.getSeconds()) };
+}
+function buildFolio(p) { return `INC-${p.Y}${p.M}${p.D}${p.h}${p.m}${p.s}`; }
+
+(function init() {
+  const p = nowP();
+  document.getElementById('folio-display').textContent = buildFolio(p);
+  document.getElementById('fecha').value = `${p.Y}-${p.M}-${p.D}`;
+  document.getElementById('hora').value  = `${p.h}:${p.m}:${p.s}`;
+  actualizarPreview();
+})();
+
+['fecha','hora'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const f = document.getElementById('fecha').value;
+    const h = document.getElementById('hora').value || '00:00:00';
+    if (!f) return;
+    const [y,m,d] = f.split('-');
+    const [hh,mi,ss] = h.split(':');
+    document.getElementById('folio-display').textContent = `INC-${y}${m}${d}${hh}${mi}${pad(ss||0)}`;
+    actualizarPreview();
+  });
+});
+
+['emisor','responsable','asunto','monto','descripcion','resolucion','categoria'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', actualizarPreview);
+  if (el && el.tagName === 'SELECT') el.addEventListener('change', actualizarPreview);
+});
+
+// Radio buttons Win95
+function setPill(tipo, valor, el) {
+  const grp = tipo === 'estado' ? 'pg-estado' : 'pg-prioridad';
+  document.querySelectorAll(`#${grp} .radio-opt`).forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(tipo).value = valor;
+  actualizarPreview();
+}
+
+function getDatos() {
+  const fechaRaw = document.getElementById('fecha').value;
+  const [y,m,d]  = fechaRaw ? fechaRaw.split('-') : ['','',''];
+  return {
+    folio:       document.getElementById('folio-display').textContent,
+    fecha:       fechaRaw ? `${d}/${m}/${y}` : '',
+    hora:        document.getElementById('hora').value || '',
+    emisor:      document.getElementById('emisor').value,
+    responsable: document.getElementById('responsable').value.trim() || '—',
+    asunto:      document.getElementById('asunto').value.trim()      || '—',
+    monto:       Number(document.getElementById('monto').value)      || 0,
+    descripcion: document.getElementById('descripcion').value.trim(),
+    resolucion:  document.getElementById('resolucion').value.trim(),
+    estado:      document.getElementById('estado').value,
+    prioridad:   document.getElementById('prioridad').value,
+    categoria:   document.getElementById('categoria').value,
+  };
+}
+
+function validar(d) {
+  if (!d.responsable || d.responsable === '—') { toast('Falta el campo Responsable.','err'); return false; }
+  if (!d.asunto      || d.asunto      === '—') { toast('Falta el campo SKU / Asunto.','err'); return false; }
+  if (!d.descripcion)                           { toast('Falta la Descripción del incidente.','err'); return false; }
+  return true;
+}
+
+function buildTexto(d) {
+  const LI = '+==========================================================================+';
+  const LS = '+--------------------------------------------------------------------------+';
+  const DA = ' ..........................................................................';
+  const DH = ' --------------------------------------------------------------------------';
+  const wrap = (txt, max=72) => {
+    if (!txt) return [''];
+    const words = txt.split(' '); let cur = ''; const res = [];
+    for (const w of words) {
+      if ((cur+' '+w).trim().length > max) { if(cur) res.push(cur); cur = w; }
+      else cur = (cur+' '+w).trim();
+    }
+    if (cur) res.push(cur);
+    return res;
+  };
+  const montoFmt = '$' + Number(d.monto).toLocaleString('es-CL');
+  return [
+    LI,
+    '|                                                                          |',
+    '|                       A R O M A K E R                                   |',
+    '|            Sociedad de Inversiones Fucas SPA                             |',
+    '|            San Bernardo, Santiago - Chile                                |',
+    '|                                                                          |',
+    LS,
+    '|       *** R E P O R T E   D E   I N C I D E N C I A ***                 |',
+    LI, '',
+    ' >>> DATOS GENERALES', DA,
+    ` FOLIO ...........: ${d.folio}`,
+    ` FECHA ...........: ${d.fecha}`,
+    ` HORA ............: ${d.hora}`,
+    ` EMISOR ..........: ${d.emisor}`,
+    ` RESPONSABLE .....: ${d.responsable}`,
+    ` ESTADO ..........: ${d.estado}`,
+    ` PRIORIDAD .......: ${d.prioridad}`,
+    ` CATEGORIA .......: ${d.categoria || '—'}`,
+    ` MONTO ...........: ${montoFmt}`,
+    DA, '',
+    ' >>> ASUNTO', DH, d.asunto, DH, '',
+    ' >>> DESCRIPCION DEL INCIDENTE', DH,
+    ...wrap(d.descripcion || ''), DH, '',
+    ' >>> RESOLUCION / ACCIONES TOMADAS', DH,
+    ...wrap(d.resolucion || ''), DH, '',
+    ' >>> FIRMAS', DA, '',
+    '  ____________________________        ____________________________',
+    `  ${d.emisor.padEnd(30)}  ${d.responsable}`,
+    '  (Emisor)                            (Responsable)',
+    DA, LI,
+    `| Generado: ${d.fecha} ${d.hora} | AROMAKER SPA                             |`,
+    LI,
+    ' >>> FIN DEL DOCUMENTO <<<'
+  ].join('\n');
+}
+
+// ── Preview en tiempo real ─────────────────────────────────
+function actualizarPreview() {
+  const d = getDatos();
+  document.getElementById('preview-pre').textContent = buildTexto(d);
+}
+
+// ── Generar PDF ────────────────────────────────────────────
+async function generarPDF(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  const W = 210, H = 297;
+  const ML = 10, MR = 10;
+  const CW = W - ML - MR;
+
+  // ── Paleta monocromática papel envejecido ──
+  const INK    = [20,  18,  14];   // casi negro
+  const PAPER  = [255, 255, 255];  // blanco
+  const PAPER2 = [240, 240, 240];  // gris claro
+  const RULE   = [170, 170, 170];  // línea media
+  const RULE2  = [80,  80,  80];   // línea oscura
+  const STAMP_R= [160, 30,  30];   // rojo sello
+  const STAMP_G= [30,  100, 50];   // verde sello
+
+  // ── helpers ──
+  const fill = (x,y,w,h,c) => { doc.setFillColor(...c); doc.rect(x,y,w,h,'F'); };
+  const stroke = (x,y,w,h,c,lw=0.3) => { doc.setDrawColor(...c); doc.setLineWidth(lw); doc.rect(x,y,w,h,'S'); };
+  const line = (x1,y1,x2,y2,c,lw=0.25) => { doc.setDrawColor(...c); doc.setLineWidth(lw); doc.line(x1,y1,x2,y2); };
+  const M = (t,x,y,sz,c,al='left') => {
+    doc.setFont('Courier','normal'); doc.setFontSize(sz); doc.setTextColor(...c);
+    doc.text(String(t),x,y,{align:al});
+  };
+  const MB = (t,x,y,sz,c,al='left') => {
+    doc.setFont('Courier','bold'); doc.setFontSize(sz); doc.setTextColor(...c);
+    doc.text(String(t),x,y,{align:al});
+  };
+  const wrapM = (t,maxW,sz) => {
+    doc.setFont('Courier','normal'); doc.setFontSize(sz);
+    return doc.splitTextToSize(String(t||''),maxW);
+  };
+  const dline = (x1,y,x2,c,gap=0.8) => { // doble línea horizontal
+    line(x1,y,x2,y,c,0.4);
+    line(x1,y+gap,x2,y+gap,c,0.15);
+  };
+  const dlineV = (x,y1,y2,c,gap=0.8) => { // doble línea vertical
+    line(x,y1,x,y2,c,0.4);
+    line(x+gap,y1,x+gap,y2,c,0.15);
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // FONDO PAPEL — toda la hoja
+  // ══════════════════════════════════════════════════════════
+  fill(0,0,W,H,PAPER);
+
+  // Ruido sutil — líneas horizontales muy finas tipo papel viejo
+  // sin ruido en fondo blanco
+  if(false){
+    line(0,i,W,i,[235,230,210],0.05);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // BORDE EXTERIOR — doble marco toda la hoja
+  // ══════════════════════════════════════════════════════════
+  stroke(6,6,W-12,H-12,RULE2,0.6);
+  stroke(7.5,7.5,W-15,H-15,RULE,0.2);
+
+  let y = 14;
+
+  // ══════════════════════════════════════════════════════════
+  // CLASIFICACIÓN TOP — "CONFIDENCIAL"
+  // ══════════════════════════════════════════════════════════
+  dline(ML,y,ML+CW,RULE2,0.7);
+  y+=1.5;
+  MB('>>> DOCUMENTO INTERNO – USO EXCLUSIVO AROMAKER <<<', W/2, y+5, 7, INK, 'center');
+  y+=6.5;
+  dline(ML,y,ML+CW,RULE2,0.7);
+  y+=4;
+
+  // ══════════════════════════════════════════════════════════
+  // CABECERA — AROMAKER + título
+  // ══════════════════════════════════════════════════════════
+  // Nombre empresa — grande centrado
+  doc.setFont('Courier','bold'); doc.setFontSize(28); doc.setTextColor(...INK);
+  doc.text('A R O M A K E R', W/2, y+10, {align:'center', charSpace:2});
+
+  // Subtítulo
+  M('SOCIEDAD DE INVERSIONES FUCAS SPA  ·  SAN BERNARDO, SANTIAGO – CHILE', W/2, y+16, 6.5, RULE2, 'center');
+
+  y+=20;
+  // Línea triple bajo cabecera
+  line(ML,y,ML+CW,y,INK,0.8);
+  line(ML,y+1.2,ML+CW,y+1.2,RULE2,0.3);
+  line(ML,y+2.2,ML+CW,y+2.2,RULE,0.15);
+  y+=5;
+
+  // Título del reporte — centrado en caja
+  fill(ML,y,CW,9,PAPER2);
+  stroke(ML,y,CW,9,RULE2,0.3);
+  MB('R E P O R T E   D E   I N C I D E N C I A', W/2, y+6.2, 10, INK, 'center');
+  y+=12;
+
+  // ══════════════════════════════════════════════════════════
+  // FOLIO + FECHA — banda de datos de identificación
+  // ══════════════════════════════════════════════════════════
+  dline(ML,y,ML+CW,RULE2);
+  y+=1.5;
+  MB('FOLIO:', ML+2, y+5, 7.5, RULE2);
+  MB(d.folio, ML+22, y+5, 9, INK);
+  MB('FECHA:', ML+CW-60, y+5, 7.5, RULE2);
+  MB(d.fecha+'  '+d.hora, ML+CW-42, y+5, 8.5, INK);
+  y+=7;
+  dline(ML,y,ML+CW,RULE2);
+  y+=5;
+
+  // ══════════════════════════════════════════════════════════
+  // SECCIÓN: DATOS GENERALES — 2 columnas
+  // ══════════════════════════════════════════════════════════
+  MB('[ I ]  DATOS GENERALES', ML+2, y+5, 8, INK);
+  y+=7;
+  line(ML,y,ML+CW,y,RULE,0.2);
+  y+=1;
+
+  const midX = ML + CW/2 + 2;
+  dlineV(ML+CW/2, y, y+30, RULE, 0.6);
+
+  const campo = (label, valor, cx, cy, labelW=28) => {
+    M(label, cx, cy, 6.5, RULE2);
+    line(cx, cy+0.8, cx+labelW-2, cy+0.8, RULE, 0.15);
+    MB(valor, cx+labelW, cy, 8.5, INK);
+  };
+
+  const rowH = 7;
+  campo('EMISOR........:', d.emisor,       ML+3, y+rowH*1);
+  campo('RESPONSABLE..:', d.responsable,   ML+3, y+rowH*2);
+  campo('SKU / ASUNTO.:', d.asunto,        ML+3, y+rowH*3);
+
+  campo('ESTADO.......:', d.estado,        midX+3, y+rowH*1);
+  campo('PRIORIDAD....:', d.prioridad,     midX+3, y+rowH*2);
+  campo('CATEGORIA....:', (d.categoria||'—'), midX+3, y+rowH*3);
+
+  y+=rowH*3+5;
+  line(ML,y,ML+CW,y,RULE,0.2);
+  y+=4;
+
+  // ══════════════════════════════════════════════════════════
+  // MONTO — destacado
+  // ══════════════════════════════════════════════════════════
+  fill(ML,y,CW,8,PAPER2);
+  stroke(ML,y,CW,8,RULE2,0.25);
+  M('VALOR ECONOMICO INVOLUCRADO:', ML+4, y+5.5, 7.5, RULE2);
+  MB('$ '+Number(d.monto).toLocaleString('es-CL'), ML+75, y+5.5, 10, INK);
+  y+=11;
+
+  // ══════════════════════════════════════════════════════════
+  // SECCIÓN: DESCRIPCIÓN
+  // ══════════════════════════════════════════════════════════
+  MB('[ II ]  DESCRIPCION DEL INCIDENTE', ML+2, y+5, 8, INK);
+  y+=7;
+  dline(ML,y,ML+CW,RULE2);
+  y+=3;
+
+  // Caja con borde izquierdo grueso
+  line(ML,y,ML,y+60,RULE2,1.2);
+  const descLines = wrapM(d.descripcion||'(Sin descripción)', CW-8, 9);
+  const descH = Math.max(18, descLines.length*5.2+6);
+  fill(ML+1,y,CW-1,descH,PAPER2);
+  doc.setFont('Courier','normal'); doc.setFontSize(9); doc.setTextColor(...INK);
+  doc.text(descLines, ML+5, y+5.5, {lineHeightFactor:1.55});
+  line(ML,y,ML,y+descH,RULE2,1.2);
+  stroke(ML+1,y,CW-1,descH,RULE,0.15);
+  y+=descH+6;
+
+  // ══════════════════════════════════════════════════════════
+  // SECCIÓN: RESOLUCIÓN
+  // ══════════════════════════════════════════════════════════
+  MB('[ III ]  RESOLUCION / ACCIONES TOMADAS', ML+2, y+5, 8, INK);
+  y+=7;
+  dline(ML,y,ML+CW,RULE2);
+  y+=3;
+
+  const resLines = wrapM(d.resolucion||'(Pendiente de resolución)', CW-8, 9);
+  const resH = Math.max(18, resLines.length*5.2+6);
+  line(ML,y,ML,y+resH,RULE2,1.2);
+  fill(ML+1,y,CW-1,resH,PAPER);
+  doc.setFont('Courier','normal'); doc.setFontSize(9); doc.setTextColor(...INK);
+  doc.text(resLines, ML+5, y+5.5, {lineHeightFactor:1.55});
+  stroke(ML+1,y,CW-1,resH,RULE,0.15);
+  y+=resH+6;
+
+  // ══════════════════════════════════════════════════════════
+  // SECCIÓN: FIRMAS
+  // ══════════════════════════════════════════════════════════
+  MB('[ IV ]  FIRMAS Y RESPONSABILIDADES', ML+2, y+5, 8, INK);
+  y+=7;
+  dline(ML,y,ML+CW,RULE2);
+  y+=5;
+
+  const fW=70, fGap=(CW-fW*2)/3;
+  const f1x=ML+fGap, f2x=ML+fGap*2+fW;
+
+  // Firma 1
+  fill(f1x,y,fW,22,PAPER2);
+  stroke(f1x,y,fW,22,RULE,0.2);
+  line(f1x+5,y+14,f1x+fW-5,y+14,RULE2,0.5); // línea firma
+  MB(d.emisor, f1x+fW/2, y+18.5, 8, INK, 'center');
+  M('EMISOR / REMITENTE', f1x+fW/2, y+22.5, 6, RULE2, 'center');
+
+  // Firma 2
+  fill(f2x,y,fW,22,PAPER2);
+  stroke(f2x,y,fW,22,RULE,0.2);
+  line(f2x+5,y+14,f2x+fW-5,y+14,RULE2,0.5);
+  MB(d.responsable, f2x+fW/2, y+18.5, 8, INK, 'center');
+  M('RESPONSABLE', f2x+fW/2, y+22.5, 6, RULE2, 'center');
+
+  y+=28;
+
+  // ══════════════════════════════════════════════════════════
+  // STAMP — sello de estado (si cabe)
+  // ══════════════════════════════════════════════════════════
+  const stampColor = d.estado==='Cerrado' ? STAMP_G : d.estado==='Abierto' ? STAMP_R : [160,120,30];
+  const stampText  = d.estado==='Cerrado' ? 'CERRADO' : d.estado==='Abierto' ? 'ABIERTO' : 'EN PROCESO';
+  // Sello rotado 15° en esquina inferior derecha
+  doc.saveGraphicsState();
+  doc.setGState(new doc.GState({opacity:0.18}));
+  doc.setFont('Courier','bold'); doc.setFontSize(38); doc.setTextColor(...stampColor);
+  doc.text(stampText, ML+CW-18, H-52, {align:'right', angle:15});
+  doc.restoreGraphicsState();
+
+  // ══════════════════════════════════════════════════════════
+  // FOOTER
+  // ══════════════════════════════════════════════════════════
+  const footY = H-20;
+  line(ML,footY,ML+CW,footY,INK,0.8);
+  line(ML,footY+1.2,ML+CW,footY+1.2,RULE2,0.3);
+  line(ML,footY+2.2,ML+CW,footY+2.2,RULE,0.15);
+
+  M('FOLIO: '+d.folio, ML+2, footY+6, 7, RULE2);
+  M('GENERADO AUTOMATICAMENTE · AROMAKER SPA · SISTEMA DE INCIDENCIAS', W/2, footY+6, 6, RULE2, 'center');
+  M(d.fecha+' '+d.hora, ML+CW, footY+6, 7, RULE2, 'right');
+
+  // Numeración página
+  M('PAG. 1 / 1', W/2, footY+11, 6.5, RULE, 'center');
+
+  // Borde exterior sobre todo
+  stroke(6,6,W-12,H-12,RULE2,0.6);
+  stroke(7.5,7.5,W-15,H-15,RULE,0.2);
+
+  doc.save(`${d.folio}.pdf`);
+}
+
+// ── Enviar al Sheet (iframe GET) ───────────────────────────
+function enviarSheet(d) {
+  return new Promise((resolve, reject) => {
+    const url = APPS_SCRIPT_URL + '?data=' + encodeURIComponent(JSON.stringify(d));
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    let done = false;
+    const t = setTimeout(() => { if(!done){done=true;document.body.removeChild(iframe);resolve(true);} }, 6000);
+    iframe.onload  = () => { if(!done){done=true;clearTimeout(t);document.body.removeChild(iframe);resolve(true);} };
+    iframe.onerror = () => { if(!done){done=true;clearTimeout(t);document.body.removeChild(iframe);reject(new Error('Red'));} };
+    iframe.src = url;
+  });
+}
+
+// ── Acción ────────────────────────────────────────────────
+function setStatus(msg, tipo='') {
+  const el = document.getElementById('status-line');
+  el.textContent = msg;
+  el.className = 'status-line ' + tipo;
+}
+
+async function accion(tipo) {
+  const d = getDatos();
+  if (!validar(d)) return;
+
+  const btnS = document.getElementById('btn-sheet');
+  const btnB = document.getElementById('btn-both');
+  btnS.disabled = btnB.disabled = true;
+
+  if (tipo === 'sheet') { btnS.innerHTML = '[ <span class="spin">◌</span> ]'; setStatus('GUARDANDO…','busy'); }
+  if (tipo === 'ambos') { btnB.innerHTML = '[ <span class="spin">◌</span> ]'; setStatus('PROCESANDO…','busy'); }
+
+  try {
+    if (tipo === 'pdf') {
+      await generarPDF(d);
+      setStatus('PDF DESCARGADO ✓','ok');
+      toast('PDF: ' + d.folio,'ok');
+    } else if (tipo === 'sheet') {
+      await enviarSheet(d);
+      setStatus('GUARDADO EN SHEET ✓','ok');
+      toast('SHEET: ' + d.folio,'ok');
+    } else if (tipo === 'ambos') {
+      await generarPDF(d);
+      await enviarSheet(d);
+      setStatus('PDF + SHEET ✓','ok');
+      toast('OK: ' + d.folio,'ok');
+    }
+  } catch(err) {
+    setStatus('ERROR: ' + err.message,'err');
+    toast('ERROR: ' + err.message,'err');
+  } finally {
+    btnS.disabled = btnB.disabled = false;
+    btnS.textContent = '[ SHEET ]';
+    btnB.textContent = '[ PDF + SHEET ]';
+  }
+}
+
+// ── Limpiar ────────────────────────────────────────────────
+function limpiar() {
+  ['responsable','asunto','descripcion','resolucion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('monto').value = '';
+  document.getElementById('categoria').value = '';
+  document.getElementById('emisor').value = 'Leonardo Castro';
+
+  document.querySelectorAll('#pg-estado .pill').forEach(p => p.className='pill');
+  document.querySelector('#pg-estado .pill').className='pill on-abierto';
+  document.getElementById('estado').value='Abierto';
+
+  document.querySelectorAll('#pg-prioridad .pill').forEach(p => p.className='pill');
+  document.querySelectorAll('#pg-prioridad .pill')[1].className='pill on-media';
+  document.getElementById('prioridad').value='Media';
+
+  const p = nowP();
+  document.getElementById('fecha').value = `${p.Y}-${p.M}-${p.D}`;
+  document.getElementById('hora').value  = `${p.h}:${p.m}:${p.s}`;
+  document.getElementById('folio-display').textContent = buildFolio(p);
+  setStatus('LISTO','');
+  actualizarPreview();
+}
+
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+function actualizarPreview() {
+  const d = getDatos();
+  document.getElementById('preview-pre').textContent = buildTexto(d);
+}
+
+function setStatus(msg, tipo='') {
+  const el = document.getElementById('status-line');
+  el.innerHTML = (tipo==='ok' ? '<span class="status-dot" style="background:#008000"></span>' :
+                  tipo==='err'? '<span class="status-dot" style="background:#800000"></span>' :
+                  tipo==='busy'?'<span class="status-dot" style="background:#808000"></span>' :
+                               '<span class="status-dot"></span>') + msg;
+}
+
+async function accion(tipo) {
+  const d = getDatos();
+  if (!validar(d)) return;
+  const btnS = document.getElementById('btn-sheet');
+  const btnB = document.getElementById('btn-both');
+  btnS.disabled = btnB.disabled = true;
+  if (tipo === 'sheet') { btnS.textContent = '⏳ Guardando...'; setStatus('Guardando en Sheet...','busy'); }
+  if (tipo === 'ambos') { btnB.textContent = '⏳ Procesando...'; setStatus('Procesando...','busy'); }
+  try {
+    if (tipo === 'pdf') {
+      await generarPDF(d);
+      setStatus('PDF generado correctamente: ' + d.folio,'ok');
+      toast('PDF generado: ' + d.folio,'ok');
+    } else if (tipo === 'sheet') {
+      await enviarSheet(d);
+      setStatus('Guardado en Sheet: ' + d.folio,'ok');
+      toast('Registro guardado en Sheet.','ok');
+    } else if (tipo === 'ambos') {
+      await generarPDF(d);
+      await enviarSheet(d);
+      setStatus('PDF + Sheet completado: ' + d.folio,'ok');
+      toast('PDF + Sheet completado correctamente.','ok');
+    }
+  } catch(err) {
+    setStatus('Error: ' + err.message,'err');
+    toast('Error: ' + err.message,'err');
+  } finally {
+    btnS.disabled = btnB.disabled = false;
+    btnS.textContent = '💾 Guardar en Sheet';
+    btnB.textContent = '⚡ PDF + Sheet';
+  }
+}
+
+function limpiar() {
+  ['responsable','asunto','descripcion','resolucion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('monto').value = '';
+  document.getElementById('categoria').value = '';
+  document.getElementById('emisor').value = 'Leonardo Castro';
+  document.querySelectorAll('#pg-estado .radio-opt').forEach(p => p.classList.remove('selected'));
+  document.querySelector('#pg-estado .radio-opt').classList.add('selected');
+  document.getElementById('estado').value='Abierto';
+  document.querySelectorAll('#pg-prioridad .radio-opt').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('#pg-prioridad .radio-opt')[1].classList.add('selected');
+  document.getElementById('prioridad').value='Media';
+  const p = nowP();
+  document.getElementById('fecha').value = `${p.Y}-${p.M}-${p.D}`;
+  document.getElementById('hora').value  = `${p.h}:${p.m}:${p.s}`;
+  document.getElementById('folio-display').textContent = buildFolio(p);
+  setStatus('Listo','');
+  actualizarPreview();
+}
+
+function toast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  const tit = document.getElementById('toast-title');
+  const bod = document.getElementById('toast-body');
+  tit.textContent = tipo==='err' ? 'Error del sistema' : 'AROMAKER – Sistema de Incidencias';
+  bod.textContent = msg;
+  t.className = `toast95 ${tipo} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>
